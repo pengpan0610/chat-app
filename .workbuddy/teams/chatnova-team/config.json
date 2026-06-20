@@ -1,0 +1,53 @@
+{
+  "name": "chatnova-team",
+  "leadAgentId": "db9e4c06438d47fa840dea069418b3d8",
+  "workspacePath": "c:/Users/彭盼/WorkBuddy/20260613144341",
+  "createdAt": "2026-06-19T14:58:25.931Z",
+  "options": {
+    "workspacePath": "c:/Users/彭盼/WorkBuddy/20260613144341",
+    "isAutoTeam": false
+  },
+  "members": [
+    {
+      "memberId": "team-lead@chatnova-team",
+      "name": "team-lead",
+      "role": "Team Lead - coordinates the team and interacts with the user"
+    },
+    {
+      "memberId": "bugfixer@chatnova-team",
+      "name": "bugfixer",
+      "role": "派驻 Bug 修复工程师"
+    },
+    {
+      "memberId": "coder@chatnova-team",
+      "name": "coder",
+      "role": "派驻前端开发工程师"
+    },
+    {
+      "memberId": "qa-tester@chatnova-team",
+      "name": "qa-tester",
+      "role": "派驻 QA 测试工程师"
+    },
+    {
+      "memberId": "reviewer@chatnova-team",
+      "name": "reviewer",
+      "role": "派驻代码审查员"
+    },
+    {
+      "memberId": "backend-dev@chatnova-team",
+      "name": "backend-dev",
+      "role": "派驻后端架构师"
+    },
+    {
+      "memberId": "mini-dev@chatnova-team",
+      "name": "mini-dev",
+      "role": "派驻小程序开发工程师"
+    },
+    {
+      "memberId": "app-dev@chatnova-team",
+      "name": "app-dev",
+      "role": "派驻APP开发工程师"
+    }
+  ],
+  "isAutoTeam": false
+}

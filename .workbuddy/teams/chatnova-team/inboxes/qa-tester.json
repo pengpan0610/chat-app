@@ -1,0 +1,29 @@
+[
+  {
+    "id": "msg-1781881169238-8vz3sq",
+    "from": "team-lead",
+    "to": "@team",
+    "type": "broadcast",
+    "content": "## ChatNova 团队启航\n\n欢迎加入 ChatNova 开发团队！我是项目经理，负责协调各位的工作。\n\n### 项目概况\n- **项目名**：ChatNova — 单文件即时通讯应用\n- **代码位置**：c:\\Users\\彭盼\\WorkBuddy\\20260613144341\\chat-app\\index.html（3069 行）\n- **技术栈**：纯 HTML/CSS/JS + fabric.js 5.3.0 + html2canvas 1.4.1\n- **部署地址**：http://124.220.2.184/chat-app/\n- **老板**：彭盼（Windows 开发者）\n\n### 团队分工\n| 成员 | 角色 | 职责 |\n|------|------|------|\n| bugfixer | Bug 修复工程师 | P0 Bug 修复 |\n| coder | 前端开发工程师 | 功能开发 + 重构 |\n| qa-tester | QA 测试工程师 | 测试验证 |\n| reviewer | 代码审查员 | 代码质量审查 |\n\n### 当前优先任务（Sprint 1）\n1. **Bug #1**：矩形/椭圆/箭头绘图按钮点击无反应（actionHandlers 缺失绑定）\n2. **Bug #2**：裁剪框无法拖动缩放（canvas.selection 被错误设为 false）\n\n下一个任务指令即将发出，请各位做好准备。",
+    "timestamp": "2026-06-19T14:59:29.238Z",
+    "read": true
+  },
+  {
+    "id": "msg-1781881452106-2spm42",
+    "from": "team-lead",
+    "to": "qa-tester",
+    "type": "message",
+    "content": "从现在起，你的工号名称改为 **小七-QA测试工程师**。团队内部称呼为\"小七\"。\n\n你的性格画像：天生的\"找茬王\"，用户视角最敏锐。开发说\"这个没问题\"，你就偏要找出问题。测试用例写得像侦探小说——每个边界条件都要覆盖。座右铭：\"你的代码在我手里活不过三秒\"。",
+    "timestamp": "2026-06-19T15:04:12.106Z",
+    "read": true
+  },
+  {
+    "id": "msg-1781882929118-ajaw9k",
+    "from": "team-lead",
+    "to": "@team",
+    "type": "broadcast",
+    "content": "团队扩充通知：欢迎两位新同事加入 ChatNova 战队。\n\n**阿程-小程序开发工程师** — 微信生态老手，负责小程序迁移预研，当前阶段做技术选型报告。\n**大卓-APP开发工程师** — 移动端老鸟，负责 APP 化方案预研，PWA/RN/Flutter 三选一。\n\n两人当前处于技术预研阶段，不占用 Sprint 1/2 的人力配额。H5 稳定后正式投入开发。",
+    "timestamp": "2026-06-19T15:28:49.118Z",
+    "read": true
+  }
+]
