@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatNova - 管理后台</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --bg: #0b0f1a;
+  --bg2: #131827;
+  --bg3: #1a2035;
+  --bg4: #232b42;
+  --text: #e8eaf0;
+  --text2: #949bb3;
+  --accent: #6c5ce7;
+  --accent2: #a29bfe;
+  --danger: #ff6b6b;
+  --success: #00cec9;
+  --warning: #fdcb6e;
+  --border: #2a3250;
+  --radius: 12px;
+}
+body { font-family: -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+.hide-for-non-admin { display: none !important; }
+
+/* 登录页 */
+.auth-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+.auth-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 100%; max-width: 420px; }
+.auth-logo { font-size: 48px; text-align: center; margin-bottom: 12px; }
+.auth-title { font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+.auth-sub { color: var(--text2); text-align: center; margin-bottom: 24px; font-size: 13px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; color: var(--text2); font-size: 13px; margin-bottom: 6px; }
+.form-input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 14px; outline: none; }
+.form-input:focus { border-color: var(--accent); }
+.btn-primary { width: 100%; padding: 12px; border-radius: 8px; border: none; background: var(--accent); color: white; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.btn-primary:hover { background: var(--accent2); }
+.auth-foot { text-align: center; margin-top: 16px; color: var(--text2); font-size: 13px; }
+.auth-foot a { color: var(--accent2); cursor: pointer; text-decoration: none; }
+.auth-foot a:hover { text-decoration: underline; }
+.error-msg { background: rgba(255,107,107,0.15); border: 1px solid var(--danger); border-radius: 8px; padding: 10px 14px; color: var(--danger); font-size: 13px; margin-bottom: 16px; }
+.success-msg { background: rgba(0,206,201,0.15); border: 1px solid var(--success); border-radius: 8px; padding: 10px 14px; color: var(--success); font-size: 13px; margin-bottom: 16px; }
+
+/* 后台主界面 */
+.admin-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.admin-header h1 { font-size: 18px; font-weight: 700; }
+.admin-header .admin-info { display: flex; align-items: center; gap: 12px; }
+.admin-header .admin-name { color: var(--text2); font-size: 13px; }
+.admin-header .btn-logout { padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font-size: 13px; }
+.admin-header .btn-logout:hover { background: var(--danger); color: white; border-color: var(--danger); }
+
+.admin-body { display: flex; height: calc(100vh - 57px); }
+
+/* 侧边栏 */
+.admin-sidebar { width: 220px; background: var(--bg2); border-right: 1px solid var(--border); padding: 12px; overflow-y: auto; }
+.sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; color: var(--text2); margin-bottom: 4px; transition: all 0.15s; }
+.sidebar-item:hover { background: var(--bg3); color: var(--text); }
+.sidebar-item.active { background: var(--accent); color: white; }
+.sidebar-item .badge { background: var(--danger); color: white; font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: auto; }
+
+/* 主内容区 */
+.admin-content { flex: 1; padding: 24px; overflow-y: auto; }
+.content-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+.content-desc { color: var(--text2); font-size: 13px; margin-bottom: 20px; }
+
+/* 表格 */
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table th { text-align: left; padding: 10px 14px; font-size: 12px; color: var(--text2); border-bottom: 1px solid var(--border); }
+.data-table td { padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+.data-table tr:hover { background: var(--bg3); }
+
+/* 按钮 */
+.btn-sm { padding: 4px 10px; border-radius: 6px; border: none; font-size: 12px; cursor: pointer; }
+.btn-approve { background: var(--success); color: white; }
+.btn-reject { background: var(--danger); color: white; }
+.btn-promote { background: var(--accent); color: white; }
+.btn-demote { background: var(--warning); color: #000; }
+.btn-delete { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+
+/* 角色标签 */
+.role-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.role-admin { background: var(--accent); color: white; }
+.role-whitelist { background: var(--warning); color: #000; }
+.role-member { background: var(--bg4); color: var(--text2); }
+
+/* 搜索框 */
+.search-box { width: 280px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text); font-size: 13px; outline: none; margin-bottom: 16px; }
+.search-box:focus { border-color: var(--accent); }
+
+/* 空状态 */
+.empty { text-align: center; padding: 60px 20px; color: var(--text2); }
+
+/* Toast */
+.toast { position: fixed; top: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; }
+.toast-success { background: var(--success); color: #000; }
+.toast-error { background: var(--danger); color: white; }
+
+/* 统计卡片 */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.stat-card .stat-value { font-size: 28px; font-weight: 700; margin-bottom: 4px; }
+.stat-card .stat-label { color: var(--text2); font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+// ─── 全局错误捕获 ──────────────────────────────────────────
+window.addEventListener('error', function(e) {
+  // 过滤跨域/扩展等无意义的 Script error.
+  if (e.message === 'Script error.' || e.lineno === 0) return;
+  var msg = 'JS 错误：' + e.message + '\n行：' + e.lineno + ':' + e.colno;
+  var app = document.getElementById('app');
+  if (app) {
+    app.innerHTML = '<div style="padding:20px;color:#ff6b6b;font-family:monospace;white-space:pre-wrap;background:#1a1a2e;min-height:100vh;">' +
+      msg + '\n\n文件：admin.html\n请截图发给我</div>';
+  }
+});
+
+// ─── 工具函数 ─────────────────────────────────────────────
+function $(sel, root) { return (root || document).querySelector(sel); }
+function escapeHtml(s) { if (!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── 存储键 ───────────────────────────────────────────────
+var STORE_KEY = 'chatnova_store';
+var REG_KEY = 'chatnova_reg_requests';
+
+// ─── 默认管理员账号（首次启动时创建）────────────────────
+var DEFAULT_ADMIN = { id: 'admin_001', name: 'admin', password: 'admin123', role: 'admin', avatar: '\u{1F9D1}\u200D\u2696\uFE0F', createdAt: Date.now() };
+
+// ─── 状态 ─────────────────────────────────────────────────
+var state = {
+  view: 'login',        // 'login' | 'register' | 'main'
+  activeTab: 'dashboard', // 'dashboard' | 'users' | 'reg' | 'groups' | 'settings'
+  loginError: '',
+  regError: '',
+  regSuccess: '',
+  search: '',
+  adminUser: null       // 当前登录的管理员
+};
+
+// ─── 数据读写 ─────────────────────────────────────────────
+function loadStore() {
+  try {
+    var raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e) { return null; }
+}
+
+function saveStore(data) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+}
+
+function getStore() {
+  var s = loadStore();
+  if (!s) {
+    // 首次启动：创建空数据结构 + 默认管理员
+    s = { users: [DEFAULT_ADMIN], groups: [], messages: {}, currentUserId: null, version: 4 };
+    saveStore(s);
+  }
+  // 确保有默认管理员
+  if (!s.users.find(function(u) { return u.id === 'admin_001'; })) {
+    s.users.push(DEFAULT_ADMIN);
+    saveStore(s);
+  }
+  return s;
+}
+
+function loadRegRequests() {
+  try {
+    var raw = localStorage.getItem(REG_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+function saveRegRequests(data) {
+  localStorage.setItem(REG_KEY, JSON.stringify(data));
+}
+
+// ─── Toast ────────────────────────────────────────────────
+function showToast(msg, type) {
+  var t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show toast-' + (type || 'success');
+  setTimeout(function() { t.className = 'toast'; }, 2500);
+}
+
+// ─── 渲染：登录页 ─────────────────────────────────────────
+function renderLogin() {
+  return '' +
+    '<div class="auth-wrap">' +
+      '<div class="auth-card">' +
+        '<div class="auth-logo">\u{1F6E1}\uFE0F</div>' +
+        '<div class="auth-title">管理后台登录</div>' +
+        '<div class="auth-sub">ChatNova 管理员专用入口</div>' +
+        (state.loginError ? '<div class="error-msg">' + escapeHtml(state.loginError) + '</div>' : '') +
+        '<div class="form-group">' +
+          '<label class="form-label">管理员账号</label>' +
+          '<input id="loginName" class="form-input" placeholder="请输入管理员账号" autocomplete="username">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">密码</label>' +
+          '<input id="loginPwd" type="password" class="form-input" placeholder="请输入密码" autocomplete="current-password">' +
+        '</div>' +
+        '<button id="btnLogin" class="btn-primary">登 录</button>' +
+        '<div class="auth-foot">还没有管理员账号？<a id="goReg">立即注册</a></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ─── 渲染：注册页 ──────────────────────────────────────────
+function renderRegister() {
+  return '' +
+    '<div class="auth-wrap">' +
+      '<div class="auth-card">' +
+        '<div class="auth-logo">\u{1F511}</div>' +
+        '<div class="auth-title">注册管理员账号</div>' +
+        '<div class="auth-sub">管理员账号拥有最高权限，请妥善保管</div>' +
+        (state.regError ? '<div class="error-msg">' + escapeHtml(state.regError) + '</div>' : '') +
+        (state.regSuccess ? '<div class="success-msg">' + escapeHtml(state.regSuccess) + '</div>' : '') +
+        '<div class="form-group">' +
+          '<label class="form-label">管理员账号（2-20 字符）</label>' +
+          '<input id="regName" class="form-input" placeholder="例如：admin" autocomplete="username">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">密码（至少 4 位）</label>' +
+          '<input id="regPwd" type="password" class="form-input" placeholder="请输入密码" autocomplete="new-password">' +
+        '</div>' +
+        '<div class="form-group">' +
+          '<label class="form-label">确认密码</label>' +
+          '<input id="regPwd2" type="password" class="form-input" placeholder="请再次输入密码" autocomplete="new-password">' +
+        '</div>' +
+        '<button id="btnReg" class="btn-primary">注册管理员</button>' +
+        '<div class="auth-foot">已有账号？<a id="goLogin">返回登录</a></div>' +
+      '</div>' +
+    '</div>';
+}
+
+// ─── 渲染：后台主界面 ──────────────────────────────────────
+function renderMain() {
+  var store = getStore();
+  var userCount = store.users.length;
+  var adminCount = store.users.filter(function(u) { return u.role === 'admin'; }).length;
+  var whitelistCount = store.users.filter(function(u) { return u.role === 'whitelist'; }).length;
+  var memberCount = store.users.filter(function(u) { return u.role === 'member'; }).length;
+  var groupCount = store.groups.length;
+  var regRequests = loadRegRequests();
+  var pendingCount = regRequests.filter(function(r) { return r.status === 'pending'; }).length;
+
+  var sidebarHtml = '' +
+    '<div class="admin-sidebar">' +
+      '<div class="sidebar-item ' + (state.activeTab === 'dashboard' ? 'active' : '') + '" data-tab="dashboard">\u{1F4CA} 控制台</div>' +
+      '<div class="sidebar-item ' + (state.activeTab === 'users' ? 'active' : '') + '" data-tab="users">\u{1F465} 用户管理</div>' +
+      '<div class="sidebar-item ' + (state.activeTab === 'reg' ? 'active' : '') + '" data-tab="reg">\u{1F4DD} 注册审核' + (pendingCount > 0 ? '<span class="badge">' + pendingCount + '</span>' : '') + '</div>' +
+      '<div class="sidebar-item ' + (state.activeTab === 'groups' ? 'active' : '') + '" data-tab="groups">\u{1F465} 群聊管理</div>' +
+      '<div class="sidebar-item ' + (state.activeTab === 'settings' ? 'active' : '') + '" data-tab="settings">\u{2699}\uFE0F 系统设置</div>' +
+    '</div>';
+
+  var contentHtml = '';
+  if (state.activeTab === 'dashboard') contentHtml = renderDashboard(store, userCount, adminCount, whitelistCount, memberCount, groupCount, pendingCount);
+  else if (state.activeTab === 'users') contentHtml = renderUsers(store);
+  else if (state.activeTab === 'reg') contentHtml = renderRegRequests(store);
+  else if (state.activeTab === 'groups') contentHtml = renderGroups(store);
+  else if (state.activeTab === 'settings') contentHtml = renderSettings();
+
+  return '' +
+    '<div class="admin-header">' +
+      '<h1>\u{1F6E1}\uFE0F ChatNova 管理后台</h1>' +
+      '<div class="admin-info">' +
+        '<span class="admin-name">' + escapeHtml(state.adminUser.name) + '（管理员）</span>' +
+        '<button class="btn-logout" id="btnLogout">退出登录</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="admin-body">' +
+      sidebarHtml +
+      '<div class="admin-content">' + contentHtml + '</div>' +
+    '</div>';
+}
+
+// ─── 渲染：控制台 ─────────────────────────────────────────
+function renderDashboard(store, userCount, adminCount, whitelistCount, memberCount, groupCount, pendingCount) {
+  return '' +
+    '<div class="content-title">控制台</div>' +
+    '<div class="content-desc">系统概览，实时数据</div>' +
+    '<div class="stats-grid">' +
+      '<div class="stat-card"><div class="stat-value">' + userCount + '</div><div class="stat-label">总用户数</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + adminCount + '</div><div class="stat-label">管理员</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + whitelistCount + '</div><div class="stat-label">白名单</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + memberCount + '</div><div class="stat-label">普通成员</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + groupCount + '</div><div class="stat-label">群组数</div></div>' +
+      '<div class="stat-card"><div class="stat-value">' + pendingCount + '</div><div class="stat-label">待审核注册</div></div>' +
+    '</div>' +
+    '<div style="color:var(--text2);font-size:13px;">' +
+      '\u{2139}\uFE0F 数据实时同步自 App 端，无需手动刷新' +
+    '</div>';
+}
+
+// ─── 渲染：用户管理 ────────────────────────────────────────
+function renderUsers(store) {
+  var q = state.search.toLowerCase();
+  var list = store.users.filter(function(u) {
+    return !q || u.name.toLowerCase().indexOf(q) >= 0 || u.role.indexOf(q) >= 0;
+  });
+  var rows = list.map(function(u) {
+    var roleClass = 'role-' + u.role;
+    var roleText = u.role === 'admin' ? '管理员' : u.role === 'whitelist' ? '白名单' : '普通成员';
+    var btns = '';
+    if (u.id !== 'admin_001') { // 不能操作默认管理员
+      if (u.role !== 'admin') btns += '<button class="btn-sm btn-promote" data-promote="' + u.id + '">升管理员</button> ';
+      if (u.role !== 'whitelist') btns += '<button class="btn-sm btn-demote" data-set-wl="' + u.id + '">设白名单</button> ';
+      if (u.role !== 'member') btns += '<button class="btn-sm btn-demote" data-demote="' + u.id + '">降为成员</button> ';
+      btns += '<button class="btn-sm btn-delete" data-del="' + u.id + '">删除</button>';
+    } else {
+      btns = '<span style="color:var(--text2);font-size:12px;">默认管理员（不可操作）</span>';
+    }
+    return '' +
+      '<tr>' +
+        '<td>' + escapeHtml(u.name) + '</td>' +
+        '<td><span class="role-badge ' + roleClass + '">' + roleText + '</span></td>' +
+        '<td>' + new Date(u.createdAt).toLocaleDateString('zh-CN') + '</td>' +
+        '<td>' + btns + '</td>' +
+      '</tr>';
+  }).join('');
+
+  return '' +
+    '<div class="content-title">用户管理</div>' +
+    '<div class="content-desc">管理系统所有用户，修改权限或删除账号</div>' +
+    '<input class="search-box" id="searchInput" placeholder="搜索账号或角色..." value="' + escapeHtml(state.search) + '">' +
+    '<table class="data-table">' +
+      '<thead><tr><th>账号</th><th>角色</th><th>注册时间</th><th>操作</th></tr></thead>' +
+      '<tbody>' + (rows || '<tr><td colspan="4" class="empty">暂无用户</td></tr>') + '</tbody>' +
+    '</table>';
+}
+
+// ─── 渲染：注册审核 ────────────────────────────────────────
+function renderRegRequests(store) {
+  var list = loadRegRequests();
+  if (list.length === 0) return '' +
+    '<div class="content-title">注册审核</div>' +
+    '<div class="content-desc">审核 App 端的新用户注册申请</div>' +
+    '<div class="empty">暂无注册申请</div>';
+
+  var rows = list.map(function(r, i) {
+    var statusText = r.status === 'pending' ? '\u{23F3} 待审核' : r.status === 'approved' ? '\u{2705} 已通过' : '\u{274C} 已拒绝';
+    var statusColor = r.status === 'pending' ? 'var(--warning)' : r.status === 'approved' ? 'var(--success)' : 'var(--danger)';
+    var btns = '';
+    if (r.status === 'pending') {
+      btns = '<button class="btn-sm btn-approve" data-approve="' + i + '">通过</button> <button class="btn-sm btn-reject" data-reject="' + i + '">拒绝</button>';
+    }
+    return '' +
+      '<tr>' +
+        '<td>' + escapeHtml(r.name) + '</td>' +
+        '<td>' + r.avatar + '</td>' +
+        '<td style="color:' + statusColor + '">' + statusText + '</td>' +
+        '<td>' + new Date(r.createdAt).toLocaleString('zh-CN') + '</td>' +
+        '<td>' + (r.reviewedAt ? new Date(r.reviewedAt).toLocaleString('zh-CN') : '-') + '</td>' +
+        '<td>' + btns + '</td>' +
+      '</tr>';
+  }).join('');
+
+  return '' +
+    '<div class="content-title">注册审核</div>' +
+    '<div class="content-desc">审核 App 端的新用户注册申请（通过后自动创建账号，默认为普通成员）</div>' +
+    '<table class="data-table">' +
+      '<thead><tr><th>账号</th><th>头像</th><th>状态</th><th>申请时间</th><th>审核时间</th><th>操作</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+// ─── 渲染：群聊管理 ────────────────────────────────────────
+function renderGroups(store) {
+  if (store.groups.length === 0) return '' +
+    '<div class="content-title">群聊管理</div>' +
+    '<div class="content-desc">管理系统所有群组</div>' +
+    '<div class="empty">暂无群组</div>';
+
+  var rows = store.groups.map(function(g) {
+    var members = g.memberIds.map(function(id) {
+      var u = store.users.find(function(uu) { return uu.id === id; });
+      return u ? u.name : id;
+    }).join('、');
+    return '' +
+      '<tr>' +
+        '<td>' + g.avatar + ' ' + escapeHtml(g.name) + '</td>' +
+        '<td>' + g.memberIds.length + '</td>' +
+        '<td>' + escapeHtml(members) + '</td>' +
+        '<td>' + new Date(g.createdAt).toLocaleDateString('zh-CN') + '</td>' +
+        '<td><button class="btn-sm btn-delete" data-del-group="' + g.id + '">解散</button></td>' +
+      '</tr>';
+  }).join('');
+
+  return '' +
+    '<div class="content-title">群聊管理</div>' +
+    '<div class="content-desc">管理系统所有群组，可解散违规群组</div>' +
+    '<table class="data-table">' +
+      '<thead><tr><th>群组</th><th>人数</th><th>成员</th><th>创建时间</th><th>操作</th></tr></thead>' +
+      '<tbody>' + rows + '</tbody>' +
+    '</table>';
+}
+
+// ─── 渲染：系统设置 ────────────────────────────────────────
+function renderSettings() {
+  var store = getStore();
+  var admin = store.users.find(function(u) { return u.id === state.adminUser.id; }) || state.adminUser;
+  return '' +
+    '<div class="content-title">系统设置</div>' +
+    '<div class="content-desc">修改管理员账号信息</div>' +
+    '<div class="auth-card" style="max-width:420px;">' +
+      '<div class="form-group">' +
+        '<label class="form-label">管理员账号</label>' +
+        '<input id="newAdminName" class="form-input" value="' + escapeHtml(admin.name) + '">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">新密码（留空表示不修改）</label>' +
+        '<input id="newAdminPwd" type="password" class="form-input" placeholder="请输入新密码">' +
+      '</div>' +
+      '<div class="form-group">' +
+        '<label class="form-label">确认新密码</label>' +
+        '<input id="newAdminPwd2" type="password" class="form-input" placeholder="请再次输入新密码">' +
+      '</div>' +
+      '<button class="btn-primary" id="btnSaveAdmin">保存修改</button>' +
+    '</div>' +
+    '<div style="margin-top:32px;">' +
+      '<div class="content-title" style="font-size:16px;">数据管理</div>' +
+      '<div class="content-desc">导出或清空系统数据（谨慎操作）</div>' +
+      '<button class="btn-primary" id="btnExport" style="width:auto;padding:10px 20px;background:var(--bg3);border:1px solid var(--border);">导出数据（JSON）</button> ' +
+      '<button class="btn-primary" id="btnReset" style="width:auto;padding:10px 20px;background:var(--danger);">清空所有数据</button>' +
+    '</div>';
+}
+
+// ─── 登录/注册逻辑 ─────────────────────────────────────────
+function doLogin() {
+  state.loginError = '';
+  var name = $('#loginName').value.trim();
+  var pwd = $('#loginPwd').value;
+  if (!name || !pwd) { state.loginError = '请输入账号和密码'; render(); return; }
+  var store = getStore();
+  var u = store.users.find(function(x) { return x.name === name && x.password === pwd && x.role === 'admin'; });
+  if (!u) { state.loginError = '管理员账号或密码错误'; render(); return; }
+  state.adminUser = u;
+  state.view = 'main';
+  render();
+  showToast('欢迎回来，' + u.name);
+}
+
+function doRegister() {
+  state.regError = '';
+  state.regSuccess = '';
+  var name = $('#regName').value.trim();
+  var pwd = $('#regPwd').value;
+  var pwd2 = $('#regPwd2').value;
+  if (!name || name.length < 2 || name.length > 20) { state.regError = '账号长度需在 2-20 字符之间'; render(); return; }
+  var store = getStore();
+  if (store.users.find(function(u) { return u.name === name; })) { state.regError = '该账号已被占用'; render(); return; }
+  if (!pwd || pwd.length < 4) { state.regError = '密码至少 4 位'; render(); return; }
+  if (pwd !== pwd2) { state.regError = '两次密码输入不一致'; render(); return; }
+  var newAdmin = {
+    id: 'admin_' + Date.now(),
+    name: name,
+    avatar: '\u{1F9D1}\u200D\u2696\uFE0F',
+    role: 'admin',
+    password: pwd,
+    createdAt: Date.now()
+  };
+  store.users.push(newAdmin);
+  saveStore(store);
+  state.regSuccess = '注册成功！请用新账号登录';
+  state.view = 'login';
+  render();
+}
+
+function doLogout() {
+  state.adminUser = null;
+  state.view = 'login';
+  state.loginError = '';
+  render();
+}
+
+// ─── 用户管理操作 ──────────────────────────────────────────
+function doPromote(uid) {
+  var store = getStore();
+  var u = store.users.find(function(x) { return x.id === uid; });
+  if (u) { u.role = 'admin'; saveStore(store); render(); showToast(u.name + ' 已升为管理员'); }
+}
+
+function doSetWhitelist(uid) {
+  var store = getStore();
+  var u = store.users.find(function(x) { return x.id === uid; });
+  if (u) { u.role = 'whitelist'; saveStore(store); render(); showToast(u.name + ' 已设为白名单'); }
+}
+
+function doDemote(uid) {
+  var store = getStore();
+  var u = store.users.find(function(x) { return x.id === uid; });
+  if (u) { u.role = 'member'; saveStore(store); render(); showToast(u.name + ' 已降为普通成员'); }
+}
+
+function doDeleteUser(uid) {
+  if (!confirm('确定要删除这个用户吗？')) return;
+  var store = getStore();
+  if (state.adminUser && uid === state.adminUser.id) {
+    showToast('不能删除当前登录账号', 'error');
+    return;
+  }
+  store.users = store.users.filter(function(u) { return u.id !== uid; });
+  store.groups.forEach(function(g) {
+    g.memberIds = g.memberIds.filter(function(memberId) { return memberId !== uid; });
+  });
+  if (store.currentUserId === uid) {
+    store.currentUserId = null;
+  }
+  saveStore(store);
+  render();
+  showToast('用户已删除');
+}
+
+// ─── 注册审核操作 ──────────────────────────────────────────
+function doApprove(idx) {
+  var list = loadRegRequests();
+  var r = list[idx];
+  if (!r || r.status !== 'pending') return;
+  r.status = 'approved';
+  r.reviewedAt = Date.now();
+  saveRegRequests(list);
+
+  // 创建用户账号
+  var store = getStore();
+  var newUser = {
+    id: 'user_' + Date.now(),
+    name: r.name,
+    avatar: r.avatar,
+    role: 'member',
+    password: r.password,
+    createdAt: r.createdAt || Date.now()
+  };
+  store.users.push(newUser);
+  saveStore(store);
+  render();
+  showToast('已通过「' + r.name + '」的注册申请');
+}
+
+function doReject(idx) {
+  var list = loadRegRequests();
+  var r = list[idx];
+  if (!r || r.status !== 'pending') return;
+  r.status = 'rejected';
+  r.reviewedAt = Date.now();
+  saveRegRequests(list);
+  render();
+  showToast('已拒绝「' + r.name + '」的注册申请');
+}
+
+// ─── 群聊管理操作 ──────────────────────────────────────────
+function doDeleteGroup(gid) {
+  if (!confirm('确定要解散这个群组吗？')) return;
+  var store = getStore();
+  store.groups = store.groups.filter(function(g) { return g.id !== gid; });
+  // 删除相关消息
+  delete store.messages['group:' + gid];
+  saveStore(store);
+  render();
+  showToast('群组已解散');
+}
+
+// ─── 系统设置操作 ──────────────────────────────────────────
+function doSaveAdmin() {
+  var newName = $('#newAdminName').value.trim();
+  var newPwd = $('#newAdminPwd').value;
+  var newPwd2 = $('#newAdminPwd2').value;
+  if (!newName || newName.length < 2 || newName.length > 20) { showToast('账号长度需在 2-20 字符之间', 'error'); return; }
+  if (newPwd && newPwd.length < 4) { showToast('密码至少 4 位', 'error'); return; }
+  if (newPwd && newPwd !== newPwd2) { showToast('两次密码输入不一致', 'error'); return; }
+  var store = getStore();
+  var admin = store.users.find(function(u) { return u.id === state.adminUser.id; });
+  if (admin) {
+    // 检查新账号名是否重复
+    if (admin.name !== newName && store.users.find(function(u) { return u.name === newName; })) { showToast('该账号名已被占用', 'error'); return; }
+    admin.name = newName;
+    if (newPwd) admin.password = newPwd;
+    saveStore(store);
+    state.adminUser = admin;
+    render();
+    showToast('管理员信息已更新');
+  }
+}
+
+function doExport() {
+  var store = getStore();
+  var reg = loadRegRequests();
+  var data = { store: store, reg_requests: reg, exportTime: new Date().toISOString() };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'chatnova_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('数据已导出');
+}
+
+function doReset() {
+  if (!confirm('确定要清空所有数据吗？\n\n包括：所有用户、群组、消息、注册申请！')) return;
+  localStorage.removeItem(STORE_KEY);
+  localStorage.removeItem(REG_KEY);
+  state.adminUser = null;
+  state.view = 'login';
+  render();
+  showToast('所有数据已清空');
+}
+
+// ─── 绑定事件 ─────────────────────────────────────────────
+function bind() {
+  if (state.view === 'login') {
+    $('#btnLogin').onclick = doLogin;
+    $('#loginPwd').onkeydown = function(e) { if (e.key === 'Enter') doLogin(); };
+    $('#goReg').onclick = function() { state.view = 'register'; state.loginError = ''; state.regError = ''; state.regSuccess = ''; render(); };
+    setTimeout(function() { if ($('#loginName')) $('#loginName').focus(); }, 50);
+  } else if (state.view === 'register') {
+    $('#btnReg').onclick = doRegister;
+    $('#goLogin').onclick = function() { state.view = 'login'; state.regError = ''; state.regSuccess = ''; render(); };
+    $('#regPwd2').onkeydown = function(e) { if (e.key === 'Enter') doRegister(); };
+    setTimeout(function() { if ($('#regName')) $('#regName').focus(); }, 50);
+  } else {
+    // 主界面
+    $('#btnLogout').onclick = doLogout;
+
+    // 侧边栏切换
+    document.querySelectorAll('.sidebar-item').forEach(function(item) {
+      item.onclick = function() { state.activeTab = this.dataset.tab; state.search = ''; render(); };
+    });
+
+    // 搜索
+    var si = $('#searchInput');
+    if (si) si.oninput = function() { state.search = this.value; render(); };
+
+    // 用户管理按钮
+    document.querySelectorAll('[data-promote]').forEach(function(b) { b.onclick = function() { doPromote(this.dataset.promote); }; });
+    document.querySelectorAll('[data-set-wl]').forEach(function(b) { b.onclick = function() { doSetWhitelist(this.dataset.setWl); }; });
+    document.querySelectorAll('[data-demote]').forEach(function(b) { b.onclick = function() { doDemote(this.dataset.demote); }; });
+    document.querySelectorAll('[data-del]').forEach(function(b) { b.onclick = function() { doDeleteUser(this.dataset.del); }; });
+
+    // 注册审核按钮
+    document.querySelectorAll('[data-approve]').forEach(function(b) { b.onclick = function() { doApprove(parseInt(this.dataset.approve, 10)); }; });
+    document.querySelectorAll('[data-reject]').forEach(function(b) { b.onclick = function() { doReject(parseInt(this.dataset.reject, 10)); }; });
+
+    // 群聊管理按钮
+    document.querySelectorAll('[data-del-group]').forEach(function(b) { b.onclick = function() { doDeleteGroup(this.dataset.delGroup); }; });
+
+    // 系统设置按钮
+    var btnSave = $('#btnSaveAdmin');
+    if (btnSave) btnSave.onclick = doSaveAdmin;
+    var btnExport = $('#btnExport');
+    if (btnExport) btnExport.onclick = doExport;
+    var btnReset = $('#btnReset');
+    if (btnReset) btnReset.onclick = doReset;
+  }
+}
+
+// ─── 渲染入口 ─────────────────────────────────────────────
+function render() {
+  var app = $('#app');
+  if (state.view === 'login') app.innerHTML = renderLogin();
+  else if (state.view === 'register') app.innerHTML = renderRegister();
+  else app.innerHTML = renderMain();
+  bind();
+}
+
+// 启动时检查是否已登录
+var stored = loadStore();
+if (stored && stored.users.length > 0) {
+  // 正常启动
+} else {
+  getStore(); // 初始化默认数据
+}
+
+// 启动渲染
+render();
+</script>
+</body>
+</html>

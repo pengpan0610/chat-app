@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>ChatNova - 数据修复</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;background:#0b0f1a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:20px}
+.box{background:#131827;border:1px solid #6c5ce7;border-radius:16px;padding:40px;max-width:500px;text-align:center}
+h1{color:#a29bfe;margin-bottom:16px}
+p{color:#8892a8;line-height:1.6;margin-bottom:12px;font-size:14px}
+button{background:#6c5ce7;color:#fff;border:none;padding:12px 24px;border-radius:8px;font-size:15px;cursor:pointer;margin:8px}
+button:hover{background:#a29bfe}
+.ok{background:#00cec9;color:#000}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>🔧 ChatNova 数据修复工具</h1>
+<p>由于应用升级，旧版数据格式可能不兼容，导致页面黑屏。</p>
+<p>点击下方按钮清空本地数据，然后重新打开应用即可。</p>
+<button onclick="clearAndGo()">🗑️ 清空数据并打开应用</button>
+<button class="ok" onclick="window.location.href='index.html'">⏭️ 跳过，直接打开</button>
+<div id="result" style="margin-top:20px;font-size:13px;color:#00cec9"></div>
+</div>
+<script>
+function clearAndGo() {
+  try {
+    localStorage.removeItem('chatnova_store');
+    document.getElementById('result').textContent = '✅ 数据已清空！正在跳转...';
+    setTimeout(() => { window.location.href = 'index.html'; }, 800);
+  } catch(e) {
+    document.getElementById('result').textContent = '❌ 清空失败：' + e.message;
+  }
+}
+</script>
+</body>
+</html>

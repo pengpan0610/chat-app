@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>测试页</title>
+</head>
+<body style="background:#0b0f1a;color:#e2e8f0;font-family:sans-serif;padding:40px">
+<h1>✅ 如果你看到这行字，说明 HTML 渲染正常</h1>
+<p>现在时间：<span id="time"></span></p>
+<p>下一步：<a href="index.html" style="color:#a29bfe">打开聊天App</a></p>
+<button onclick="localStorage.clear();alert('localStorage已清空！');location.reload();" style="padding:12px 24px;background:#6c5ce7;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;margin-top:20px">🗑️ 一键清空localStorage</button>
+<script>
+document.getElementById('time').textContent = new Date().toLocaleString('zh-CN');
+console.log('✅ test.html JS执行正常');
+</script>
+</body>
+</html>

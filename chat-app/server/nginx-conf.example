@@ -1,0 +1,66 @@
+# Nginx 反向代理配置示例
+# 将此文件内容合并到 /etc/nginx/sites-available/default 或新建 chat-app 文件
+# 然后 ln -s /etc/nginx/sites-available/chat-app /etc/nginx/sites-enabled/
+
+server {
+    # 监听端口（用域名时改 80 为 443 并配置 SSL）
+    listen 80;
+    server_name 124.220.2.184;
+
+    # ── 上传文件大小限制（图片上传需要）───
+    client_max_body_size 10M;
+
+    # ── 静态文件：前端 HTML/CSS/JS ───────────
+    location /chat-app/ {
+        alias /var/www/html/chat-app/;
+        try_files $uri $uri/ =404;
+        # 禁止缓存 HTML（方便前端更新）
+        location ~* \.html$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate";
+        }
+        # 静态资源缓存 7 天
+        location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+            expires 7d;
+            add_header Cache-Control "public, immutable";
+        }
+    }
+
+    # ── 上传的图片静态访问 ─────────────────────
+    location /chat-app/uploads/ {
+        alias /var/www/html/chat-app/uploads/;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+
+    # ── API 反向代理 ───────────────────────────
+    location /api/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # ── WebSocket 反向代理（Socket.IO）─────────
+    location /socket.io/ {
+        proxy_pass http://127.0.0.1:3000/socket.io/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        # WebSocket 长连接超时（秒）
+        proxy_read_timeout 86400;
+        proxy_send_timeout 86400;
+    }
+
+    # ── 健康检查（可选）────────────────────────
+    location /health {
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+}
