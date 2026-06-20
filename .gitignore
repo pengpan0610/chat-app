@@ -26,3 +26,15 @@ node_modules/
 # WorkBuddy 鍐呴儴
 .workbuddy/automations/
 .workbuddy/memory/
+
+# WorkBuddy 内部文件
+.workbuddy/
+
+
+# WorkBuddy 内部文件
+.workbuddy/
+
+
+# WorkBuddy 内部文件
+.workbuddy/
+
