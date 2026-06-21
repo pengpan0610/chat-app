@@ -185,7 +185,8 @@ input, textarea { font-family: inherit; }
 .input-wrap:focus-within { border-color: var(--accent); }
 .msg-input {
   flex: 1; background: none; border: none; color: var(--text); font-size: 14px;
-  resize: none; max-height: 120px; min-height: 24px; line-height: 1.5;
+  resize: none; max-height: 200px; min-height: 24px; line-height: 1.5;
+  overflow-y: auto;
 }
 .msg-input:focus { outline: none; }
 .btn-send {
@@ -401,6 +402,11 @@ input, textarea { font-family: inherit; }
   display: block; object-fit: cover;
 }
 .msg-img:hover { opacity: 0.92; }
+.msg-location {
+  background: var(--card2); border-radius: 8px; padding: 10px 12px;
+  cursor: pointer; max-width: 220px; line-height: 1.5;
+}
+.msg-location:hover { opacity: 0.85; }
 .msg-pending { opacity: 0.6; font-style: italic; }
 .msg-pending-tag {
   display: inline-block; font-size: 10px; padding: 1px 6px;
@@ -627,6 +633,10 @@ input, textarea { font-family: inherit; }
 .camera-overlay .cam-btn-retry {
   background: rgba(255,255,255,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.5) !important;
 }
+.camera-overlay .cam-btn-edit {
+  background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3) !important;
+  display: flex; align-items: center; gap: 6px;
+}
 .camera-overlay .cam-btn-confirm {
   background: #07C160; color: #fff;
 }
@@ -636,6 +646,61 @@ input, textarea { font-family: inherit; }
   background: rgba(0,0,0,0.7); padding: 20px 24px; border-radius: 12px; display: none;
 }
 .camera-overlay .cam-error.show { display: block; }
+
+/* ===== 语音输入界面 ===== */
+.voice-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.92); z-index: 1300;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+  color: #fff;
+}
+.voice-overlay.active { display: flex; }
+.voice-overlay .voice-lang {
+  position: absolute; top: 16px; left: 16px;
+  font-size: 13px; color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.12); border: none; border-radius: 8px;
+  padding: 6px 12px; color: #fff;
+}
+.voice-overlay .voice-tip {
+  font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 32px;
+}
+.voice-overlay .voice-mic {
+  width: 88px; height: 88px; border-radius: 50%;
+  background: rgba(255,255,255,0.15); border: 3px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 40px; cursor: pointer; transition: all 0.2s;
+  margin-bottom: 24px;
+}
+.voice-overlay .voice-mic.recording {
+  background: rgba(220,53,69,0.3); border-color: #dc3545;
+  animation: voice-pulse 1.2s infinite;
+}
+@keyframes voice-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.voice-overlay .voice-text {
+  font-size: 18px; text-align: center; padding: 0 32px;
+  min-height: 60px; max-width: 90%; line-height: 1.6;
+  color: rgba(255,255,255,0.9);
+}
+.voice-overlay .voice-text.placeholder { color: rgba(255,255,255,0.35); font-size: 15px; }
+.voice-overlay .voice-actions {
+  position: absolute; bottom: 40px; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 24px;
+}
+.voice-overlay .voice-actions button {
+  padding: 10px 32px; border-radius: 24px; font-size: 15px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.2s;
+}
+.voice-overlay .voice-cancel { background: rgba(255,255,255,0.15); color: #fff; }
+.voice-overlay .voice-cancel:hover { background: rgba(255,255,255,0.25); }
+.voice-overlay .voice-confirm { background: #07C160; color: #fff; }
+.voice-overlay .voice-confirm:hover { background: #06aD52; }
+.voice-overlay .voice-error {
+  font-size: 13px; color: #ff7675; margin-top: 16px; text-align: center; padding: 0 32px;
+}
 </style>
 </head>
 <body>
@@ -686,6 +751,42 @@ function escapeHtml(s) {
   });
 }
 function $(sel, root) { return (root || document).querySelector(sel); }
+
+function autoGrow(el) {
+  el.style.height = 'auto';
+  var maxH = 200;
+  el.style.height = Math.min(el.scrollHeight, maxH) + 'px';
+}
+
+function sendLocation() {
+  if (!navigator.geolocation) {
+    showToast('该浏览器不支持定位功能');
+    return;
+  }
+  // HTTP 环境且不是 localhost 时，geolocation 可能被阻止
+  var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+  if (location.protocol === 'http:' && !isLocal) {
+    showToast('定位功能需要 HTTPS 环境，请使用 https 访问');
+    return;
+  }
+  showToast('正在获取位置...');
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude.toFixed(6);
+    var lng = pos.coords.longitude.toFixed(6);
+    state._pendingLocation = 'LOC:' + lat + ',' + lng;
+    doSend();
+  }, function(err) {
+    var msg = '获取位置失败';
+    if (err.code === 1) msg = '用户拒绝了定位请求';
+    else if (err.code === 2) msg = '无法获取位置信息';
+    else if (err.code === 3) msg = '获取位置超时';
+    showToast(msg);
+  }, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 30000
+  });
+}
 
 function loadStore() {
   try { var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; }
@@ -803,7 +904,12 @@ var state = {
   emojiTab: 0,
   // ===== 相机拍照预览 =====
   showCameraPreview: false,
-  _cameraPhoto: ''
+  _cameraPhoto: '',
+  // ===== 语音输入 =====
+  voiceActive: false,      // 是否正在语音识别
+  voiceText: '',         // 识别结果
+  voiceLang: 'zh-CN',    // 识别语言：zh-CN普通话 / zh-HK粤语 / zh-TW台语 等
+  voiceError: ''         // 错误信息
 };
 
 function me() { return store.users.find(function(u) { return u.id === store.currentUserId; }); }
@@ -1129,9 +1235,19 @@ function renderChatArea() {
       // 群消息 pending：仅发送者自己可见（审核中）
       var isPending = m.reviewStatus === 'pending';
       if (isPending && !mine) return '';
-      // 内容渲染：图片 vs 文字
+      // 内容渲染：位置 / 图片 / 文字
       var bodyHtml;
-      if (m.text && m.text.indexOf('IMG:') === 0) {
+      if (m.text && m.text.indexOf('LOC:') === 0) {
+        var locParts = m.text.slice(4).split(',');
+        var lat = locParts[0] || '';
+        var lng = (locParts[1] || '').split('|')[0];
+        bodyHtml = '<div class="msg-location" onclick="window.open(\'https://map.qq.com/m/?latlng=' + lat + ',' + lng + '&title=\u5730\u70B9\u5206\u4EAB\')">' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:4px">\uD83D\uDCC1 \u4F4D\u7F6E\u5206\u4EAB</div>' +
+          '<div style="font-size:11px;color:var(--text2)">\u7EAC\u5EA6: ' + lat + '</div>' +
+          '<div style="font-size:11px;color:var(--text2)">\u7ECF\u5EA6: ' + lng + '</div>' +
+          '<div style="font-size:11px;color:var(--blue);margin-top:6px">\u70B9\u51FB\u6253\u5F00\u5730\u56FE \u203A</div>' +
+          '</div>';
+      } else if (m.text && m.text.indexOf('IMG:') === 0) {
         bodyHtml = '<img class="msg-img" src="' + m.text.slice(4) + '" onclick="window.open(this.src)" alt="图片">';
       } else {
         bodyHtml = escapeHtml(m.text);
@@ -1171,7 +1287,7 @@ function renderChatArea() {
             '<button id="btnEmoji" class="icon-btn" title="表情">' + ICON.emoji + '</button>' +
           '</div>' +
         '</div>' +
-        '<div class="input-wrap"><textarea id="msgInput" class="msg-input" placeholder="输入消息，回车发送，Shift+回车换行" rows="1"></textarea></div>' +
+        '<div class="input-wrap"><textarea id="msgInput" class="msg-input" placeholder="输入消息，回车发送，Shift+回车换行" rows="1" oninput="autoGrow(this)"></textarea></div>' +
         '<button id="btnSend" class="btn-send">' + ICON.send + ' 发送</button>' +
       '</div>' +
       renderPlusPanel() +
@@ -1252,6 +1368,7 @@ function bindEmojiEvents() {
         mi.value = v.slice(0, start) + emoji + v.slice(end);
         mi.selectionStart = mi.selectionEnd = start + emoji.length;
         state.draft = mi.value;
+        autoGrow(mi);
       }
     };
   });
@@ -1783,8 +1900,9 @@ function doSend() {
   var input = $('#msgInput');
   if (!input) return;
   var text = input.value.trim();
-  // 支持图片消息：state._pendingImage = 'IMG:data:image/png;base64,...'
-  if (state._pendingImage) text = state._pendingImage;
+  // 支持图片/位置消息
+  if (state._pendingLocation) text = state._pendingLocation;
+  else if (state._pendingImage) text = state._pendingImage;
   if (!text) return;
   var msg = { id: genId('msg'), from: store.currentUserId, text: text, time: now(), timestamp: Date.now(), read: false };
   if (state._pendingCaption) msg.caption = state._pendingCaption;
@@ -1810,6 +1928,7 @@ function doSend() {
   }
   saveStore();
   state.draft = '';
+  state._pendingLocation = null;
   state._pendingImage = null;
   state._pendingCaption = null;
   render();
@@ -1820,6 +1939,9 @@ function render() {
   if (state.view === 'login') { app.innerHTML = renderAuth(); }
   else { app.innerHTML = renderMain(); }
   bind();
+  // 更新语音遮罩
+  var vw = document.getElementById('voiceOverlayWrap');
+  if (vw) vw.innerHTML = (typeof renderVoiceOverlay === 'function') ? renderVoiceOverlay() : '';
 }
 
 if (store.currentUserId && userById(store.currentUserId)) {
@@ -1933,7 +2055,17 @@ function renderGroupReviewPanel() {
       var sname = sender ? sender.name : '未知';
       var savatar = sender ? sender.avatar : '\u{1F464}';
       var bodyHtml;
-      if (r.text && r.text.indexOf('IMG:') === 0) {
+      if (r.text && r.text.indexOf('LOC:') === 0) {
+        var locParts = r.text.slice(4).split(',');
+        var lat = locParts[0] || '';
+        var lng = (locParts[1] || '').split('|')[0];
+        bodyHtml = '<div class="msg-location" onclick="window.open(\'https://map.qq.com/m/?latlng=' + lat + ',' + lng + '&title=\u4F4D\u7F6E\u5206\u4EAB\')">' +
+          '<div style="font-size:13px;font-weight:600;margin-bottom:4px">\uD83D\uDCC1 \u4F4D\u7F6E\u5206\u4EAB</div>' +
+          '<div style="font-size:11px;color:var(--text2)">\u7EAC\u5EA6: ' + lat + '</div>' +
+          '<div style="font-size:11px;color:var(--text2)">\u7ECF\u5EA6: ' + lng + '</div>' +
+          '<div style="font-size:11px;color:var(--blue);margin-top:6px">\u70B9\u51FB\u6253\u5F00\u5730\u56FE \u203A</div>' +
+          '</div>';
+      } else if (r.text && r.text.indexOf('IMG:') === 0) {
         bodyHtml = '<img class="msg-img" src="' + r.text.slice(4) + '" style="max-width:160px;max-height:160px">';
       } else {
         bodyHtml = escapeHtml(r.text);
@@ -2214,7 +2346,7 @@ function closeCustomCamera() {
   }
   if (video) { video.srcObject = null; video.style.display = ''; }
   if (preview) { preview.style.display = 'none'; preview.src = ''; }
-  if (reviewBar) reviewBar.classList.remove('show');
+  if (reviewBar) { reviewBar.classList.remove('show'); reviewBar.style.display = 'none'; }
   _camPhotoData = '';
 }
 
@@ -2251,9 +2383,9 @@ function takeCustomPhoto() {
     preview.src = dataUrl;
     preview.style.display = 'block';
   }
-  // 显示操作栏
+  // 显示操作栏（用 style 直接覆盖内联 display:none）
   var reviewBar = document.getElementById('cameraReviewBar');
-  if (reviewBar) reviewBar.classList.add('show');
+  if (reviewBar) { reviewBar.classList.add('show'); reviewBar.style.display = 'flex'; }
   // 隐藏 video
   if (video) video.style.display = 'none';
 }
@@ -2263,7 +2395,7 @@ function retryCustomPhoto() {
   var reviewBar = document.getElementById('cameraReviewBar');
   var video = _camVideo || document.getElementById('cameraVideo');
   if (preview) { preview.style.display = 'none'; preview.src = ''; }
-  if (reviewBar) reviewBar.classList.remove('show');
+  if (reviewBar) { reviewBar.classList.remove('show'); reviewBar.style.display = 'none'; }
   if (video) video.style.display = '';
   _camPhotoData = '';
 }
@@ -2272,7 +2404,16 @@ function confirmCustomPhoto() {
   if (!_camPhotoData) { showToast('请先拍照'); return; }
   compressImage(_camPhotoData, 1280, function(compressed) {
     closeCustomCamera();
-    state.shotSrc = compressed;
+    state._cameraPhoto = compressed;
+    state.showCameraPreview = true;
+    render();
+  });
+}
+function editCustomPhoto() {
+  if (!_camPhotoData) { showToast('请先拍照'); return; }
+  compressImage(_camPhotoData, 1280, function(compressed) {
+    closeCustomCamera();
+    state._shotSrc = compressed;
     state._shotFromLib = true;
     state.showShotEditor = true;
     render();
@@ -2330,9 +2471,9 @@ function handleFileSelected(e) {
 // ===== 相机拍照预览弹窗 =====
 function renderCameraPreview() {
   return '' +
-    '<div class="shot-region-bg" style="z-index:1100;display:flex;flex-direction:column;align-items:center;justify-content:center">' +
+    '<div class="shot-region-bg" style="z-index:1100">' +
       // 顶部工具栏：取消和发送
-      '<div class="shot-region-toolbar">' +
+      '<div class="shot-region-toolbar" style="padding-top:env(safe-area-inset-top,12px)">' +
         '<button data-act="camera-preview-cancel" style="background:none;border:none;color:#fff;font-size:16px;cursor:pointer;padding:6px 12px">取消</button>' +
         '<span style="color:#fff;font-size:14px;font-weight:500">预览</span>' +
         '<button data-act="camera-preview-send" style="background:#07C160;border:none;color:#fff;font-size:15px;font-weight:600;cursor:pointer;padding:8px 20px;border-radius:6px">\u2713 发送</button>' +
@@ -2342,7 +2483,7 @@ function renderCameraPreview() {
         '<img src="' + state._cameraPhoto + '" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,0.5)">' +
       '</div>' +
       // 底部：编辑按钮
-      '<div style="padding:16px 20px;display:flex;justify-content:center;align-items:center">' +
+      '<div style="padding:16px 20px;padding-bottom:env(safe-area-inset-bottom,16px);display:flex;justify-content:center;align-items:center">' +
         '<button data-act="camera-preview-edit" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:12px 32px;border-radius:24px;font-size:16px;font-weight:600;cursor:pointer;-webkit-tap-highlight-color:transparent;backdrop-filter:blur(8px)">' +
           '<span style="font-size:18px">\u270E</span><span>编辑</span>' +
         '</button>' +
@@ -3240,10 +3381,10 @@ function initPlusMenu() {
         if (fp2) fp2.click();
         break;
       case 'send-location':
-        showToast('位置发送功能开发中...');
+        sendLocation();
         break;
       case 'send-voice':
-        showToast('语音消息功能开发中...');
+        openVoiceInput();
         break;
     }
   }
@@ -3368,171 +3509,173 @@ function showCustomCamera() {
     });
 }
 
-function closeCustomCamera() {
-  var overlay = document.getElementById('customCamera');
-  var video = document.getElementById('cameraVideo');
-  var preview = document.getElementById('cameraPhotoPreview');
-  var reviewBar = document.getElementById('cameraReviewBar');
-  if (overlay) overlay.classList.remove('active');
-  if (_camStream) {
-    _camStream.getTracks().forEach(function(t) { t.stop(); });
-    _camStream = null;
+// ===== 语音输入 =====
+var _voiceRec = null;   // SpeechRecognition 实例
+var _voiceTimer = null; // 超时定时器
+
+function openVoiceInput() {
+  if (!state.activeChat) { showToast('请先选择聊天'); return; }
+  // 检查浏览器支持
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('⚠ 当前浏览器不支持语音识别\n请使用 Chrome/Edge 浏览器');
+    return;
   }
-  if (video) { video.srcObject = null; video.style.display = ''; }
-  if (preview) { preview.style.display = 'none'; preview.src = ''; }
-  if (reviewBar) reviewBar.classList.remove('show');
-  _camPhotoData = '';
+  state.voiceActive = true;
+  state.voiceText = '';
+  state.voiceError = '';
+  render();
+  startVoiceRecognition();
 }
 
-function takeCustomPhoto() {
-  var video = _camVideo || document.getElementById('cameraVideo');
-  if (!video || video.videoWidth === 0) { showToast('相机未就绪'); return; }
-  var c = document.getElementById('cameraCanvas');
-  if (!c) {
-    c = document.createElement('canvas');
-    c.id = 'cameraCanvas';
-    c.style.display = 'none';
-    document.body.appendChild(c);
-  }
-  _camCanvas = c;
-  c.width = video.videoWidth;
-  c.height = video.videoHeight;
-  var ctx = c.getContext('2d');
-  if (_camFacing === 'user') {
-    ctx.save();
-    ctx.scale(-1, 1);
-    ctx.drawImage(video, -c.width, 0, c.width, c.height);
-    ctx.restore();
-  } else {
-    ctx.drawImage(video, 0, 0, c.width, c.height);
-  }
-  var dataUrl = c.toDataURL('image/jpeg', 0.92);
-  _camPhotoData = dataUrl;
-  var preview = document.getElementById('cameraPhotoPreview');
-  if (preview) {
-    preview.src = dataUrl;
-    preview.style.display = 'block';
-  }
-  var reviewBar = document.getElementById('cameraReviewBar');
-  if (reviewBar) reviewBar.classList.add('show');
-  if (video) video.style.display = 'none';
-}
+function startVoiceRecognition() {
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  // 停止之前的实例
+  if (_voiceRec) { try { _voiceRec.stop(); } catch(e) {} }
 
-function retryCustomPhoto() {
-  var preview = document.getElementById('cameraPhotoPreview');
-  var reviewBar = document.getElementById('cameraReviewBar');
-  var video = _camVideo || document.getElementById('cameraVideo');
-  if (preview) { preview.style.display = 'none'; preview.src = ''; }
-  if (reviewBar) reviewBar.classList.remove('show');
-  if (video) video.style.display = '';
-  _camPhotoData = '';
-}
+  _voiceRec = new SR();
+  _voiceRec.lang = state.voiceLang || 'zh-CN';
+  _voiceRec.continuous = true;   // 连续识别
+  _voiceRec.interimResults = true; // 返回中间结果
+  _voiceRec.maxAlternatives = 1;
 
-function confirmCustomPhoto() {
-  if (!_camPhotoData) { showToast('请先拍照'); return; }
-  compressImage(_camPhotoData, 1280, function(compressed) {
-    closeCustomCamera();
-    state.shotSrc = compressed;
-    state._shotFromLib = true;
-    state.showShotEditor = true;
+  _voiceRec.onstart = function() {
+    state.voiceError = '';
     render();
-    setTimeout(function() {
-      if (typeof initFabricCanvas === 'function') initFabricCanvas();
-    }, 100);
-  });
-}
-
-function switchCamera() {
-  _camFacing = _camFacing === 'environment' ? 'user' : 'environment';
-  if (_camStream) {
-    _camStream.getTracks().forEach(function(t) { t.stop(); });
-    _camStream = null;
-  }
-  var video = _camVideo || document.getElementById('cameraVideo');
-  if (video) video.srcObject = null;
-  showCustomCamera();
-}
-
-function toggleFlash() {
-  if (!_camStream) return;
-  var track = _camStream.getVideoTracks()[0];
-  if (!track || !track.getCapabilities) return;
-  var caps = track.getCapabilities();
-  if (caps.torch === undefined) { showToast('当前设备不支持闪光灯'); return; }
-  var settings = track.getSettings();
-  var on = !settings.torch;
-  track.applyConstraints({ advanced: [{ torch: on }] })
-    .then(function() {
-      var btn = document.getElementById('camFlashBtn');
-      if (btn) btn.textContent = on ? '🔦' : '⚡';
-      var st = document.getElementById('camFlashStatus');
-      if (st) st.textContent = on ? '闪光灯：开' : '闪光灯：关';
-    })
-    .catch(function() { showToast('闪光灯切换失败'); });
-}
-
-// 初始化 fabric 画布（拍照/相册进入编辑时调用）
-function initFabricCanvas() {
-  var stage = document.querySelector('.shot-stage');
-  if (!stage) { showToast('编辑区未就绪'); return; }
-  var canvasEl = stage.querySelector('canvas');
-  if (!canvasEl) {
-    // 创建 canvas 元素
-    canvasEl = document.createElement('canvas');
-    canvasEl.id = 'shotFabricCanvas';
-    canvasEl.style.maxWidth = '100%';
-    canvasEl.style.maxHeight = '100%';
-    stage.appendChild(canvasEl);
-  }
-  var w = stage.clientWidth || 800;
-  var h = stage.clientHeight || 600;
-  canvasEl.width = w;
-  canvasEl.height = h;
-  var canvas = new fabric.Canvas(canvasEl, {
-    width: w,
-    height: h,
-    backgroundColor: '#000',
-    defaultCursor: 'default',
-    selection: false
-  });
-  state._fabricCanvas = canvas;
-  // 加载背景图
-  var src = state.shotSrc;
-  if (!src) { showToast('没有图片数据'); return; }
-  fabric.Image.fromURL(src, function(img) {
-    var iw = img.width, ih = img.height;
-    var scale = Math.min(w / iw, h / ih, 1);
-    img.scaleX = scale;
-    img.scaleY = scale;
-    img.left = (w - iw * scale) / 2;
-    img.top = (h - ih * scale) / 2;
-    img.selectable = false;
-    img.evented = false;
-    canvas.setBackgroundImage(img, function() {
-      canvas.renderAll();
-      pushHistory();
-    });
-  }, { crossOrigin: 'anonymous' });
-}
-
-// 图片压缩（等比例，最大边不超过 maxSize）
-function compressImage(dataUrl, maxSize, cb) {
-  var img = new Image();
-  img.onload = function() {
-    var w = img.naturalWidth, h = img.naturalHeight;
-    var ratio = 1;
-    if (w > h && w > maxSize) ratio = maxSize / w;
-    else if (h > w && h > maxSize) ratio = maxSize / h;
-    if (ratio >= 1) { cb(dataUrl); return; }
-    var c = document.createElement('canvas');
-    c.width = Math.round(w * ratio);
-    c.height = Math.round(h * ratio);
-    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-    cb(c.toDataURL('image/jpeg', 0.85));
+    showToast('🎙 正在聆听...说完自动识别');
   };
-  img.onerror = function() { cb(dataUrl); };
-  img.src = dataUrl;
+
+  _voiceRec.onresult = function(e) {
+    var interim = '';
+    var final = '';
+    for (var i = 0; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        final += e.results[i][0].transcript;
+      } else {
+        interim += e.results[i][0].transcript;
+      }
+    }
+    state.voiceText = final || interim;
+    render();
+  };
+
+  _voiceRec.onerror = function(e) {
+    console.error('[语音识别] 错误:', e.error);
+    var msg = '';
+    if (e.error === 'not-allowed') {
+      msg = '⚠ 请允许浏览器访问麦克风';
+    } else if (e.error === 'no-speech') {
+      msg = '未检测到语音，请重试';
+    } else if (e.error === 'network') {
+      msg = '⚠ 网络错误，请检查网络连接';
+    } else {
+      msg = '⚠ 识别错误：' + e.error;
+    }
+    state.voiceError = msg;
+    render();
+  };
+
+  _voiceRec.onend = function() {
+    // 正常结束，不做特殊处理（用户点"完成"时手动停止）
+    console.log('[语音识别] 结束');
+  };
+
+  try {
+    _voiceRec.start();
+  } catch(err) {
+    state.voiceError = '启动语音识别失败：' + (err.message || err);
+    render();
+  }
 }
+
+function stopVoiceRecognition() {
+  if (_voiceRec) {
+    try { _voiceRec.stop(); } catch(e) {}
+    _voiceRec = null;
+  }
+}
+
+function confirmVoiceInput() {
+  stopVoiceRecognition();
+  var text = (state.voiceText || '').trim();
+  if (text) {
+    var mi = document.getElementById('msgInput');
+    if (mi) {
+      // 追加到输入框（不覆盖已有内容）
+      if (mi.value && mi.value.trim()) {
+        mi.value = mi.value.trim() + ' ' + text;
+      } else {
+        mi.value = text;
+      }
+      mi.focus();
+      // 触发 input 事件让 UI 更新
+      mi.dispatchEvent(new Event('input'));
+    }
+    showToast('✅ 已填入输入框');
+  }
+  state.voiceActive = false;
+  state.voiceText = '';
+  render();
+}
+
+function cancelVoiceInput() {
+  stopVoiceRecognition();
+  state.voiceActive = false;
+  state.voiceText = '';
+  state.voiceError = '';
+  render();
+}
+
+function toggleVoiceLang() {
+  // 切换方言：普通话 → 粤语 → 台语 → 普通话
+  var langs = [
+    { code: 'zh-CN', name: '普通话' },
+    { code: 'zh-HK', name: '粤语' },
+    { code: 'zh-TW', name: '台语' }
+  ];
+  var idx = langs.findIndex(function(l) { return l.code === state.voiceLang; });
+  idx = (idx + 1) % langs.length;
+  state.voiceLang = langs[idx].code;
+  showToast('已切换为：' + langs[idx].name);
+  // 如果正在识别，重启以应用新语言
+  if (_voiceRec) {
+    stopVoiceRecognition();
+    setTimeout(startVoiceRecognition, 300);
+  }
+  render();
+}
+
+// 渲染语音输入界面
+function renderVoiceOverlay() {
+  if (!state.voiceActive) return '';
+  var text = state.voiceText || '';
+  var placeholder = !text ? '请开始说话...' : '';
+  var err = state.voiceError || '';
+  var langName = state.voiceLang === 'zh-HK' ? '粤语' : (state.voiceLang === 'zh-TW' ? '台语' : '普通话');
+  return '' +
+    '<div class="voice-overlay active" id="voiceOverlay">' +
+      '<button class="voice-lang" onclick="toggleVoiceLang()" title="切换方言">' + langName + '</button>' +
+      '<div class="voice-tip">点击麦克风开始说话</div>' +
+      '<div class="voice-mic ' + (_voiceRec ? 'recording' : '') + '" onclick="toggleVoiceRec()">🎙</div>' +
+      '<div class="voice-text ' + (!text ? 'placeholder' : '') + '" id="voiceText">' + escapeHtml(text || placeholder) + '</div>' +
+      (err ? '<div class="voice-error">' + escapeHtml(err) + '</div>' : '') +
+      '<div class="voice-actions">' +
+        '<button class="voice-cancel" onclick="cancelVoiceInput()">取消</button>' +
+        '<button class="voice-confirm" onclick="confirmVoiceInput()">填入输入框</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function toggleVoiceRec() {
+  if (_voiceRec) {
+    stopVoiceRecognition();
+    showToast('⏸ 已停止识别');
+  } else {
+    startVoiceRecognition();
+  }
+}
+
 </script>
 <!-- 自定义相机 -->
 <div class="camera-overlay" id="customCamera">
@@ -3549,12 +3692,16 @@ function compressImage(dataUrl, maxSize, cb) {
     <div style="width:44px"></div>
   </div>
   <img class="cam-photo-review" id="cameraPhotoPreview">
-  <div class="cam-review-bar" id="cameraReviewBar" style="display:none">
-    <button class="cam-btn-retry" onclick="retryCustomPhoto()">重拍</button>
-    <button class="cam-btn-confirm" onclick="confirmCustomPhoto()">确定</button>
-  </div>
+    <div class="cam-review-bar" id="cameraReviewBar" style="display:none">
+      <button class="cam-btn-retry" onclick="retryCustomPhoto()">重拍</button>
+      <button class="cam-btn-edit" onclick="editCustomPhoto()">✎ 编辑</button>
+      <button class="cam-btn-confirm" onclick="confirmCustomPhoto()">确定</button>
+    </div>
   <div class="cam-error" id="cameraError" style="display:none"></div>
 </div>
+
+<!-- 语音输入界面 -->
+<div id="voiceOverlayWrap"></div>
 
 </body>
 </html>
